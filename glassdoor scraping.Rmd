@@ -1,0 +1,330 @@
+---
+title: "GlassdoorJobs"
+author: "LeTicia Cancel"
+date: "10/13/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+libraries
+```{r message=FALSE, warning=FALSE}
+library(rvest)
+library(tidyverse)
+```
+Glassdoor site link
+```{r}
+site <- "https://www.glassdoor.com/Job/jobs.htm?suggestCount=0&suggestChosen=false&clickSource=searchBtn&typedKeyword=data&locT=C&locId=1132200&jobType=&context=Jobs&sc.keyword=Data+Scientist&dropdown=0"
+https://www.glassdoor.com/Job/brooklyn-data-scientist-jobs-SRCH_IL.0,8_IC1132200_KO9,23_IP4.htm
+
+site
+
+listings <- read_html(site)
+```
+
+
+Get each part of the job post
+```{r}
+#URL pt2
+listings %>%
+  html_nodes(".jobLink") %>%
+  html_attr("href") %>%
+  as.character()
+
+#test URL
+test <- "https://www.glassdoor.com/job-listing/data-scientist-7park-data-JV_IC1132348_KO0,14_KE15,25.htm?jl=3688042667&pos=101&ao=834153&s=149&guid=0000017523e31d8daa9284d99be44f04&src=GD_JOB_AD&t=SRFJ&vt=w&uido=50E402DFD7A06DF42230898450DAB9F2&cs=1_f0ddf6f8&cb=1602624888780&jobListingId=3688042667&ctt=1602625398008"
+
+listings <- read_html(test)
+
+#title
+listings %>%
+  html_nodes(".css-17x2pwl.e11nt52q6") %>%
+  html_text()
+
+#company
+listings %>%
+  html_nodes(".e11nt52q1") %>%
+  html_text()
+
+#rating
+listings %>%
+  html_nodes(".css-1v5elnn.e11nt52q2") %>%
+  html_nodes("span") %>%
+  html_text()
+
+#description
+listings %>%
+  html_nodes(".desc.css-58vpdc.ecgq1xb4") %>%
+  html_text()
+
+```
+
+
+build loop
+```{r}
+
+site1 <- "https://www.glassdoor.com/Job/brooklyn-data-scientist-jobs-SRCH_IL.0,8_IC1132200_KO9,23_IP2.htm"
+pages = 2
+
+fullURL <- str_c(site1,pages,site2)
+
+listings <- read_html(fullURL)
+
+jobURL <- listings %>%
+  html_nodes(".jobLink") %>%
+  html_attr("href") %>%
+  as.character()
+
+length(jobURL)
+
+all.jobs <- data.frame()
+
+#main loop
+for(i in 1:length(jobURL)){
+  #url <- str_c(site1,page_num = i,".htm")
+  
+  listings <- read_html(site1)
+  
+  listingURL <- listings %>%
+    html_nodes(".jobLink") %>%
+    html_attr("href") %>%
+    as.character()
+  
+  fullURL <- str_c("https://www.glassdoor.com",listingURL)
+  
+  fullURL
+  
+  #new loop for each listing
+  for(l in 1:length(fullURL)){
+    job <- read_html(fullURL[l])
+    
+    #job title
+    title <- job %>%
+      html_nodes(".css-17x2pwl.e11nt52q6") %>%
+      html_text()
+    
+    #company
+    company <- job %>%
+      html_nodes(".e11nt52q1") %>%
+      html_text()
+    
+    #rating 
+    rating <- job %>%
+      html_nodes(".css-1v5elnn.e11nt52q2") %>%
+      html_nodes("span") %>%
+      html_text()
+    
+    #description
+    description <- job %>%
+      html_nodes(".desc.css-58vpdc.ecgq1xb4") %>%
+      html_text()
+    
+    if(i==1){
+      all.jobs <- cbind(title,company,rating,description)
+    }
+    else{
+      all.jobs[i,] <- cbind(title,company,rating,description)
+    }
+  }
+  
+}
+
+length(fullURL)
+fullURL[1]
+for(l in 1:length(fullURL)){
+    job <- read_html(fullURL[l])
+    
+    #job title
+    title <- job %>%
+      html_nodes(".css-17x2pwl.e11nt52q6") %>%
+      html_text()
+    
+    #company
+    company <- job %>%
+      html_nodes(".e11nt52q1") %>%
+      html_text()
+    
+    #rating 
+    rating <- job %>%
+      html_nodes(".css-1v5elnn.e11nt52q2") %>%
+      html_nodes("span") %>%
+      html_text()
+    
+    #description
+    description <- job %>%
+      html_nodes(".desc.css-58vpdc.ecgq1xb4") %>%
+      html_text()      
+    
+    all.jobs <- cbind(title,company,rating,description)
+  }
+```
+
+
+jack's code
+```{r}
+#base of the link we want to build
+base_url<-"https://www.indeed.com/jobs?q=data%20science&l=United%20States&start="
+#linkedin structure goes by 10 results per page
+#max is the pages you want to look at
+max=1000
+
+
+#function to build db of page links
+indeed_iterate_pages<-function(base_url,max){
+  df_link<-data.frame("link"=character())
+  link_base_url<-link_base_url
+  max<-max
+  
+  #loop to create links
+  for(i in 1:max){
+    n<-(i-1)
+    page<-as.character(n*10)
+    link<-paste0(link_base_url,page)
+    df_link<-rbind(df_link, link)
+    list_of_links<-pull(df_link,1)
+  }
+  return(list_of_links)
+}
+
+#testing iterate_pages()
+#link_list<-iterate_pages(link_base_url,nmax)
+
+#pull all job links from a single page
+job_links<-function(job_links_list){
+  job_links_list<-job_links_list
+  jobURL<-list()
+  for (i in 1:length(job_links_list)){
+    html<-read_html(job_links_list[i])
+    temp_urls<-html%>%
+      html_nodes(".result-card__full-card-link") %>%
+      html_attr("href") %>%
+      as.character()
+    jobURL<-append(jobURL,temp_urls)
+    
+  }
+  
+  
+  return(jobURL)
+}
+#testing job_links()
+#job_postings<-job_links(df_link[1,1])
+
+
+#combine iterate pages and pull links from every page into one function
+#added a check to avoid double counting the same link twice. 
+all_links<-function(link_base_url,max){
+  
+  link_base_url<-base_url
+  max<-max
+  link_list<-iterate_pages(link_base_url,max)
+  job_link_list<-list()
+  for (i in 1:length(link_list)){
+    temp_list<-job_links(link_list[i])
+    
+    #checks each element from each page by detecting 
+    #if the same job title+id is already on our output
+    for(n in 1:length(temp_list)){
+      
+      id<-str_extract(temp_list[n],"(?<=https://www.linkedin.com/jobs/view/)(.)+\\?")
+      link_unique<-str_detect(job_link_list,id)
+      bool<-sum(link_unique)
+      
+      
+      
+      if(bool==0){
+        job_link_list<-append(job_link_list,temp_list[n])
+      }
+    }
+  }
+  return(job_link_list)
+}
+
+#testing all_links()
+#test<-all_links(link_base_url,nmax)
+
+
+#function for pulling single job info
+
+job_scrape<-function(link_to_job_page){
+  
+  #turn list element into a character
+  char_link<-as.character(link_to_job_page)
+  #read html into R
+  url<-read_html(char_link)
+  #pull job title
+  jobTitle <- url %>%
+    html_nodes(".topcard__title") %>%
+    html_text()
+  
+  #pull company
+  company <- url %>%
+    html_nodes(".topcard__flavor--black-link") %>%
+    html_text()
+  
+  #pull location
+  location <- url %>%
+    html_nodes(".topcard__flavor.topcard__flavor--bullet") %>%
+    html_text()
+  
+  #pull number of applicants
+  applicants <- url %>%
+    html_nodes(".num-applicants__caption") %>%
+    html_text()
+  #pull salary
+  salary <- url %>%
+    html_node(".topcard__flavor--salary") %>%
+    html_text()
+  
+  #pull description
+  description <- url %>%
+    html_nodes(".description__text") %>%
+    html_text()
+  
+  job_vector<-c(jobTitle,company,location,applicants,salary,description,char_link)
+  
+  return(job_vector)
+  
+}
+
+
+#testing job_scrape
+#test_vector<-job_scrape(test[2])
+
+
+#function for applying job scrape to all jobs in a list and building a data.frame
+
+all_jobs_scrape<-function(job_link_list){
+  urls<-job_link_list
+  #create data frame to load info into
+  df_jobs<-data.frame("job_title"=character(),"company"=character(),"location"=character(),"applicants"=numeric(),"salary"=character(),"description"=character(),"href"=character())
+  for(i in 1:length(urls)){
+    #fill temporary vector with job info
+    temp_job<-job_scrape(urls[i])
+    #append row to output data frame
+    df_jobs<-rbind(df_jobs,temp_job)
+  }
+  #return data frame with jobs in it
+  colnames(df_jobs)<-c("job_title","company","location","applicants","salary","description","link")
+  return(df_jobs)
+}
+
+#test of all_jobs_scrape (not working when I scrape too much)
+#test_jobs_data_frame<-all_jobs_scrape(test[1:100])
+
+#all in one function, full scrape from base url, returns data frame
+#link_base_url is the base url without the appened page number thing
+#max is the maximum number of pages you want to scrape
+linkedIn_scrape<-function(link_base_url,max){
+  link_base_url<-link_base_url
+  max<-max
+  job_link_list<-all_links(link_base_url=link_base_url,max=max)
+  final_output_df<-all_jobs_scrape(job_link_list)
+  return(final_output_df)
+  
+  
+}
+linkedIn_scrape()
+```
+
